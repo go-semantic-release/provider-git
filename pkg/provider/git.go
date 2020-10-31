@@ -25,22 +25,22 @@ type Repository struct {
 }
 
 func (repo *Repository) Init(config map[string]string) error {
-	repo.defaultBranch = config["defaultBranch"]
+	repo.defaultBranch = config["default_branch"]
 	if repo.defaultBranch == "" {
 		repo.defaultBranch = "master"
 	}
 
-	repo.taggerName = config["taggerName"]
+	repo.taggerName = config["tagger_name"]
 	if repo.taggerName == "" {
 		repo.taggerName = "semantic-release"
 	}
 
-	repo.taggerEmail = config["taggerEmail"]
+	repo.taggerEmail = config["tagger_email"]
 	if repo.taggerEmail == "" {
 		repo.taggerEmail = "git@go-semantic-release.xyz"
 	}
 
-	gitPath := config["gitPath"]
+	gitPath := config["git_path"]
 	if gitPath == "" {
 		gitPath = "."
 	}
