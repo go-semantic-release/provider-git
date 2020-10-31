@@ -56,6 +56,7 @@ func setupRepo() (string, error) {
 		When:  time.Now(),
 	}
 	versionCount := 0
+	betaCount := 1
 	for i := 0; i < 100; i++ {
 		commit, err := w.Commit(fmt.Sprintf("feat: commit %d", i), &git.CommitOptions{Author: author})
 		if err != nil {
@@ -66,6 +67,12 @@ func setupRepo() (string, error) {
 				return "", err
 			}
 			versionCount++
+		}
+		if i%5 == 0 {
+			if _, err := repo.CreateTag(fmt.Sprintf("v2.0.0-beta.%d", betaCount), commit, nil); err != nil {
+				return "", err
+			}
+			betaCount++
 		}
 	}
 
@@ -150,4 +157,18 @@ func TestGithubCreateRelease(t *testing.T) {
 	require.NoError(err)
 
 	require.Equal("new feature\n", tagObj.Message)
+}
+
+func TestGetReleases(t *testing.T) {
+	require := require.New(t)
+	repo, _, err := createRepo()
+	require.NoError(err)
+
+	releases, err := repo.GetReleases("")
+	require.NoError(err)
+	require.Len(releases, 30)
+
+	releases, err = repo.GetReleases("^v2")
+	require.NoError(err)
+	require.Len(releases, 20)
 }
