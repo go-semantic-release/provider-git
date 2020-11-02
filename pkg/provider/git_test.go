@@ -8,32 +8,49 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-semantic-release/semantic-release/v2/pkg/provider"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewRepository(t *testing.T) {
+var testGitPath string
+
+func TestGit(t *testing.T) {
+	var err error
+	testGitPath, err = setupRepo()
+	require.NoError(t, err)
+	t.Run("NewRepository", newRepository)
+	t.Run("GetInfo", getInfo)
+	t.Run("GetReleases", getReleases)
+	t.Run("GetCommits", getCommits)
+	t.Run("CreateRelease", createRelease)
+}
+
+func newRepository(t *testing.T) {
 	require := require.New(t)
 	repo := &Repository{}
 	err := repo.Init(map[string]string{})
 	require.EqualError(err, "repository does not exist")
 
-	gitPath, err := setupRepo()
-	require.NoError(err)
-
 	repo = &Repository{}
 	err = repo.Init(map[string]string{
-		"git_path":       gitPath,
+		"git_path":       testGitPath,
 		"default_branch": "development",
 		"tagger_name":    "test",
 		"tagger_email":   "test@test.com",
+		"auth":           "basic",
+		"auth_username":  "test",
+		"auth_password":  "test",
 	})
+
 	require.NoError(err)
-	require.Equal(repo.defaultBranch, "development")
-	require.Equal(repo.taggerName, "test")
-	require.Equal(repo.taggerEmail, "test@test.com")
+	require.Equal("development", repo.defaultBranch)
+	require.Equal("test", repo.taggerName)
+	require.Equal("test@test.com", repo.taggerEmail)
+	require.NotNil(repo.auth)
 }
 
 func setupRepo() (string, error) {
@@ -42,6 +59,14 @@ func setupRepo() (string, error) {
 		return "", err
 	}
 	repo, err := git.PlainInit(dir, false)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = repo.CreateRemote(&config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{"http://localhost:3000/test/test.git"},
+	})
 	if err != nil {
 		return "", err
 	}
@@ -91,38 +116,51 @@ func setupRepo() (string, error) {
 		return "", err
 	}
 
+	err = repo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			"refs/heads/*:refs/heads/*",
+			"refs/tags/*:refs/tags/*",
+		},
+		Auth: &http.BasicAuth{
+			Username: "test",
+			Password: "test",
+		},
+		Force: true,
+	})
+	if err != nil {
+		return "", err
+	}
 	return dir, nil
 }
 
-func createRepo() (*Repository, string, error) {
-	gitPath, err := setupRepo()
-	if err != nil {
-		return nil, "", err
-	}
-
+func createRepo() (*Repository, error) {
 	repo := &Repository{}
-	err = repo.Init(map[string]string{
-		"git_path": gitPath,
+	err := repo.Init(map[string]string{
+		"git_path":      testGitPath,
+		"auth":          "basic",
+		"auth_username": "test",
+		"auth_password": "test",
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	return repo, gitPath, nil
+	return repo, nil
 }
 
-func TestGetInfo(t *testing.T) {
+func getInfo(t *testing.T) {
 	require := require.New(t)
-	repo, _, err := createRepo()
+	repo, err := createRepo()
 	require.NoError(err)
 	repoInfo, err := repo.GetInfo()
 	require.NoError(err)
 	require.Equal("master", repoInfo.DefaultBranch)
 }
 
-func TestGetCommits(t *testing.T) {
+func getCommits(t *testing.T) {
 	require := require.New(t)
-	repo, _, err := createRepo()
+	repo, err := createRepo()
 	require.NoError(err)
 	commits, err := repo.GetCommits("", "master")
 	require.NoError(err)
@@ -133,12 +171,12 @@ func TestGetCommits(t *testing.T) {
 	}
 }
 
-func TestGithubCreateRelease(t *testing.T) {
+func createRelease(t *testing.T) {
 	require := require.New(t)
-	repo, gitPath, err := createRepo()
+	repo, err := createRepo()
 	require.NoError(err)
 
-	gRepo, err := git.PlainOpen(gitPath)
+	gRepo, err := git.PlainOpen(testGitPath)
 	require.NoError(err)
 	head, err := gRepo.Head()
 	require.NoError(err)
@@ -159,9 +197,9 @@ func TestGithubCreateRelease(t *testing.T) {
 	require.Equal("new feature\n", tagObj.Message)
 }
 
-func TestGetReleases(t *testing.T) {
+func getReleases(t *testing.T) {
 	require := require.New(t)
-	repo, _, err := createRepo()
+	repo, err := createRepo()
 	require.NoError(err)
 
 	releases, err := repo.GetReleases("")

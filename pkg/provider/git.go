@@ -8,9 +8,13 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-semantic-release/semantic-release/v2/pkg/provider"
 	"github.com/go-semantic-release/semantic-release/v2/pkg/semrel"
 )
@@ -21,6 +25,8 @@ type Repository struct {
 	defaultBranch string
 	taggerName    string
 	taggerEmail   string
+	remoteName    string
+	auth          transport.AuthMethod
 	repo          *git.Repository
 }
 
@@ -38,6 +44,30 @@ func (repo *Repository) Init(config map[string]string) error {
 	repo.taggerEmail = config["tagger_email"]
 	if repo.taggerEmail == "" {
 		repo.taggerEmail = "git@go-semantic-release.xyz"
+	}
+
+	repo.remoteName = config["remote_name"]
+	if repo.remoteName == "" {
+		repo.remoteName = "origin"
+	}
+
+	if config["auth_username"] == "" {
+		config["auth_username"] = "git"
+	}
+
+	if config["auth"] == "basic" {
+		repo.auth = &http.BasicAuth{
+			Username: config["auth_username"],
+			Password: config["auth_password"],
+		}
+	} else if config["auth"] == "ssh" {
+		auth, err := ssh.NewPublicKeysFromFile(config["auth_username"], config["auth_private_key"], config["auth_password"])
+		if err != nil {
+			return err
+		}
+		repo.auth = auth
+	} else {
+		repo.auth = nil
 	}
 
 	gitPath := config["git_path"]
@@ -144,7 +174,14 @@ func (repo *Repository) CreateRelease(release *provider.CreateReleaseConfig) err
 	if err != nil {
 		return err
 	}
-	return nil
+	err = repo.repo.Push(&git.PushOptions{
+		RemoteName: repo.remoteName,
+		RefSpecs: []config.RefSpec{
+			config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag)),
+		},
+		Auth: repo.auth,
+	})
+	return err
 }
 
 func (repo *Repository) Name() string {
