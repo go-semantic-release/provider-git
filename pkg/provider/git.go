@@ -47,9 +47,6 @@ func (repo *Repository) Init(config map[string]string) error {
 	}
 
 	repo.remoteName = config["remote_name"]
-	if repo.remoteName == "" {
-		repo.remoteName = "origin"
-	}
 
 	if config["auth_username"] == "" {
 		config["auth_username"] = "git"
