@@ -94,8 +94,13 @@ func (repo *Repository) GetInfo() (*provider.RepositoryInfo, error) {
 
 func (repo *Repository) GetCommits(fromSha, toSha string) ([]*semrel.RawCommit, error) {
 	allCommits := make([]*semrel.RawCommit, 0)
+	toHash, err := repo.repo.ResolveRevision(plumbing.Revision(toSha))
+	if err != nil {
+		return nil, err
+	}
+
 	commits, err := repo.repo.Log(&git.LogOptions{
-		From: plumbing.NewHash(toSha),
+		From: *toHash,
 	})
 	if err != nil {
 		return nil, err
