@@ -181,20 +181,37 @@ func createRelease(t *testing.T) {
 	head, err := gRepo.Head()
 	require.NoError(err)
 
-	err = repo.CreateRelease(&provider.CreateReleaseConfig{
-		NewVersion: "2.0.0",
-		SHA:        head.Hash().String(),
-		Changelog:  "new feature",
-	})
-	require.NoError(err)
+	testCases := []struct {
+		version, sha, changelog string
+	}{
+		{
+			version:   "2.0.0",
+			sha:       head.Hash().String(),
+			changelog: "new feature",
+		},
+		{
+			version:   "3.0.0",
+			sha:       "master",
+			changelog: "breaking change",
+		},
+	}
 
-	tagRef, err := gRepo.Tag("v2.0.0")
-	require.NoError(err)
+	for _, testCase := range testCases {
+		err = repo.CreateRelease(&provider.CreateReleaseConfig{
+			NewVersion: testCase.version,
+			SHA:        testCase.sha,
+			Changelog:  testCase.changelog,
+		})
+		require.NoError(err)
 
-	tagObj, err := gRepo.TagObject(tagRef.Hash())
-	require.NoError(err)
+		tagRef, err := gRepo.Tag("v" + testCase.version)
+		require.NoError(err)
 
-	require.Equal("new feature\n", tagObj.Message)
+		tagObj, err := gRepo.TagObject(tagRef.Hash())
+		require.NoError(err)
+
+		require.Equal(testCase.changelog+"\n", tagObj.Message)
+	}
 }
 
 func getReleases(t *testing.T) {

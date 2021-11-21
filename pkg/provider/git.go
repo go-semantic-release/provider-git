@@ -164,8 +164,17 @@ func (repo *Repository) GetReleases(rawRe string) ([]*semrel.Release, error) {
 }
 
 func (repo *Repository) CreateRelease(release *provider.CreateReleaseConfig) error {
+	hash := plumbing.NewHash(release.SHA)
+	if hash.IsZero() {
+		// hash is not valid, let's assume it is a branch name
+		resolvedRef, err := repo.repo.Reference(plumbing.NewBranchReferenceName(release.SHA), true)
+		if err != nil {
+			return err
+		}
+		hash = resolvedRef.Hash()
+	}
 	tag := fmt.Sprintf("v%s", release.NewVersion)
-	_, err := repo.repo.CreateTag(tag, plumbing.NewHash(release.SHA), &git.CreateTagOptions{
+	_, err := repo.repo.CreateTag(tag, hash, &git.CreateTagOptions{
 		Message: release.Changelog,
 		Tagger: &object.Signature{
 			Name:  repo.taggerName,
