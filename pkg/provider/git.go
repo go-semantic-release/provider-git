@@ -164,8 +164,10 @@ func (repo *Repository) GetReleases(rawRe string) ([]*semrel.Release, error) {
 }
 
 func (repo *Repository) CreateRelease(release *provider.CreateReleaseConfig) error {
-	hash := plumbing.NewHash(release.SHA)
-	if hash.IsZero() {
+	var hash plumbing.Hash
+	if plumbing.IsHash(release.SHA) {
+		hash = plumbing.NewHash(release.SHA)
+	} else {
 		// hash is not valid, let's assume it is a branch name
 		resolvedRef, err := repo.repo.Reference(plumbing.NewBranchReferenceName(release.SHA), true)
 		if err != nil {
