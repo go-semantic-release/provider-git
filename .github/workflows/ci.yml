@@ -10,16 +10,19 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: golangci/golangci-lint-action@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - uses: golangci/golangci-lint-action@v3
   test:
     runs-on: ubuntu-latest
     needs: lint
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
       - run: ./scripts/start-gitea.sh
       - run: go test -v ./...
   build:
@@ -30,19 +33,19 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
       - run: go build ./cmd/provider-git/
   release:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
       - run: |
           go install github.com/mitchellh/gox@latest
           go install github.com/tcnksm/ghr@latest
