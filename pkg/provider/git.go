@@ -52,18 +52,19 @@ func (repo *Repository) Init(config map[string]string) error {
 		config["auth_username"] = "git"
 	}
 
-	if config["auth"] == "basic" {
+	switch config["auth"] {
+	case "basic":
 		repo.auth = &http.BasicAuth{
 			Username: config["auth_username"],
 			Password: config["auth_password"],
 		}
-	} else if config["auth"] == "ssh" {
+	case "ssh":
 		auth, err := ssh.NewPublicKeysFromFile(config["auth_username"], config["auth_private_key"], config["auth_password"])
 		if err != nil {
 			return err
 		}
 		repo.auth = auth
-	} else {
+	default:
 		repo.auth = nil
 	}
 
@@ -137,15 +138,15 @@ func (repo *Repository) GetReleases(rawRe string) ([]*semrel.Release, error) {
 		if rawRe != "" && !re.MatchString(tag) {
 			return nil
 		}
-		version, err := semver.NewVersion(tag)
-		if err != nil {
+		version, semverErr := semver.NewVersion(tag)
+		if semverErr != nil {
 			return nil
 		}
 
 		// resolve annotated tags
 		sha := reference.Hash()
-		if tagObj, err := repo.repo.TagObject(sha); err == nil {
-			if com, err := tagObj.Commit(); err == nil {
+		if tagObj, tagErr := repo.repo.TagObject(sha); tagErr == nil {
+			if com, commitErr := tagObj.Commit(); commitErr == nil {
 				sha = com.Hash
 			}
 		}

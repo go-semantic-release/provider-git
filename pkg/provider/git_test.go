@@ -2,7 +2,7 @@ package provider
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -53,8 +53,9 @@ func newRepository(t *testing.T) {
 	require.NotNil(repo.auth)
 }
 
+//gocyclo:ignore
 func setupRepo() (string, error) {
-	dir, err := ioutil.TempDir("", "provider-git")
+	dir, err := os.MkdirTemp("", "provider-git")
 	if err != nil {
 		return "", err
 	}
@@ -83,19 +84,19 @@ func setupRepo() (string, error) {
 	versionCount := 0
 	betaCount := 1
 	for i := 0; i < 100; i++ {
-		commit, err := w.Commit(fmt.Sprintf("feat: commit %d", i), &git.CommitOptions{Author: author})
-		if err != nil {
+		commit, commitErr := w.Commit(fmt.Sprintf("feat: commit %d", i), &git.CommitOptions{Author: author, AllowEmptyCommits: true})
+		if commitErr != nil {
 			return "", err
 		}
 		if i%10 == 0 {
-			if _, err := repo.CreateTag(fmt.Sprintf("v1.%d.0", versionCount), commit, nil); err != nil {
-				return "", err
+			if _, tagErr := repo.CreateTag(fmt.Sprintf("v1.%d.0", versionCount), commit, nil); tagErr != nil {
+				return "", tagErr
 			}
 			versionCount++
 		}
 		if i%5 == 0 {
-			if _, err := repo.CreateTag(fmt.Sprintf("v2.0.0-beta.%d", betaCount), commit, nil); err != nil {
-				return "", err
+			if _, tagErr := repo.CreateTag(fmt.Sprintf("v2.0.0-beta.%d", betaCount), commit, nil); tagErr != nil {
+				return "", tagErr
 			}
 			betaCount++
 		}
@@ -109,7 +110,7 @@ func setupRepo() (string, error) {
 		return "", err
 	}
 
-	if _, err = w.Commit("fix: error", &git.CommitOptions{Author: author}); err != nil {
+	if _, err = w.Commit("fix: error", &git.CommitOptions{Author: author, AllowEmptyCommits: true}); err != nil {
 		return "", err
 	}
 	if err = w.Checkout(&git.CheckoutOptions{Branch: plumbing.NewBranchReferenceName("master")}); err != nil {
