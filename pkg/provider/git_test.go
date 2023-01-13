@@ -53,6 +53,12 @@ func newRepository(t *testing.T) {
 	require.NotNil(repo.auth)
 }
 
+var gitCommitAuthor = &object.Signature{
+	Name:  "test",
+	Email: "test@test.com",
+	When:  time.Now(),
+}
+
 //gocyclo:ignore
 func setupRepo() (string, error) {
 	dir, err := os.MkdirTemp("", "provider-git")
@@ -76,15 +82,10 @@ func setupRepo() (string, error) {
 		return "", err
 	}
 
-	author := &object.Signature{
-		Name:  "test",
-		Email: "test@test.com",
-		When:  time.Now(),
-	}
 	versionCount := 0
 	betaCount := 1
 	for i := 0; i < 100; i++ {
-		commit, commitErr := w.Commit(fmt.Sprintf("feat: commit %d", i), &git.CommitOptions{Author: author, AllowEmptyCommits: true})
+		commit, commitErr := w.Commit(fmt.Sprintf("feat: commit %d", i), &git.CommitOptions{Author: gitCommitAuthor, AllowEmptyCommits: true})
 		if commitErr != nil {
 			return "", err
 		}
@@ -110,7 +111,7 @@ func setupRepo() (string, error) {
 		return "", err
 	}
 
-	if _, err = w.Commit("fix: error", &git.CommitOptions{Author: author, AllowEmptyCommits: true}); err != nil {
+	if _, err = w.Commit("fix: error", &git.CommitOptions{Author: gitCommitAuthor, AllowEmptyCommits: true}); err != nil {
 		return "", err
 	}
 	if err = w.Checkout(&git.CheckoutOptions{Branch: plumbing.NewBranchReferenceName("master")}); err != nil {
@@ -169,6 +170,12 @@ func getCommits(t *testing.T) {
 
 	for _, c := range commits {
 		require.True(strings.HasPrefix(c.RawMessage, "feat: commit"))
+		require.Equal(gitCommitAuthor.Name, c.Annotations["author_name"])
+		require.Equal(gitCommitAuthor.Email, c.Annotations["author_email"])
+		require.Equal(gitCommitAuthor.When.Format(time.RFC3339), c.Annotations["author_date"])
+		require.Equal(gitCommitAuthor.When.Format(time.RFC3339), c.Annotations["committer_date"])
+		require.Equal(gitCommitAuthor.Name, c.Annotations["committer_name"])
+		require.Equal(gitCommitAuthor.Email, c.Annotations["committer_email"])
 	}
 }
 

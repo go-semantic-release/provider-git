@@ -111,6 +111,14 @@ func (repo *Repository) GetCommits(fromSha, toSha string) ([]*semrel.RawCommit, 
 		allCommits = append(allCommits, &semrel.RawCommit{
 			SHA:        commit.Hash.String(),
 			RawMessage: commit.Message,
+			Annotations: map[string]string{
+				"author_name":     commit.Author.Name,
+				"author_email":    commit.Author.Email,
+				"author_date":     commit.Author.When.Format(time.RFC3339),
+				"committer_name":  commit.Committer.Name,
+				"committer_email": commit.Committer.Email,
+				"committer_date":  commit.Committer.When.Format(time.RFC3339),
+			},
 		})
 		return nil
 	})
