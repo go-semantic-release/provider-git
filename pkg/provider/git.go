@@ -28,6 +28,7 @@ type Repository struct {
 	remoteName    string
 	auth          transport.AuthMethod
 	repo          *git.Repository
+	pushOptions   map[string]string
 }
 
 func (repo *Repository) Init(config map[string]string) error {
@@ -66,6 +67,15 @@ func (repo *Repository) Init(config map[string]string) error {
 		repo.auth = auth
 	default:
 		repo.auth = nil
+	}
+
+	if config["push_options"] != "" {
+		options := strings.Split(config["push_options"], ",")
+		repo.pushOptions = make(map[string]string, len(options))
+		for _, o := range options {
+			key, value, _ := strings.Cut(o, "=")
+			repo.pushOptions[key] = value
+		}
 	}
 
 	gitPath := config["git_path"]
@@ -201,7 +211,8 @@ func (repo *Repository) CreateRelease(release *provider.CreateReleaseConfig) err
 		RefSpecs: []config.RefSpec{
 			config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag)),
 		},
-		Auth: repo.auth,
+		Auth:    repo.auth,
+		Options: repo.pushOptions,
 	})
 	return err
 }

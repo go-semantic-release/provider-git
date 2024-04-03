@@ -41,7 +41,8 @@ To use this plugin you need to include the following block in your
 | auth_username    | git                         | The name of the user to use for authentication.    |
 | auth_password    |                             | The password to use for basic auth or the SSH key. |
 | auth_private_key |                             | The path to an SSH private key file.               |
-| git_path         | .                           | The path to the Git repository                     |
+| git_path         | .                           | The path to the Git repository.                    |
+| push_options     |                             | The push options for the git tag push.             |
 
 ### Authentication
 
