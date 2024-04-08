@@ -29,6 +29,7 @@ type Repository struct {
 	auth          transport.AuthMethod
 	repo          *git.Repository
 	pushOptions   map[string]string
+	prefix        string
 }
 
 func (repo *Repository) Init(config map[string]string) error {
@@ -76,6 +77,10 @@ func (repo *Repository) Init(config map[string]string) error {
 			key, value, _ := strings.Cut(o, "=")
 			repo.pushOptions[key] = value
 		}
+	}
+
+	if config["tag_prefix"] != "" {
+		repo.prefix = config["tag_prefix"]
 	}
 
 	gitPath := config["git_path"]
@@ -149,10 +154,10 @@ func (repo *Repository) GetReleases(rawRe string) ([]*semrel.Release, error) {
 
 	err = tags.ForEach(func(reference *plumbing.Reference) error {
 		ref := reference.Name().String()
-		if !strings.HasPrefix(ref, "refs/tags/") {
+		if !strings.HasPrefix(ref, "refs/tags/"+repo.prefix) {
 			return nil
 		}
-		tag := strings.TrimPrefix(ref, "refs/tags/")
+		tag := strings.TrimPrefix(ref, "refs/tags/"+repo.prefix)
 		if rawRe != "" && !re.MatchString(tag) {
 			return nil
 		}
@@ -194,7 +199,7 @@ func (repo *Repository) CreateRelease(release *provider.CreateReleaseConfig) err
 		}
 		hash = resolvedRef.Hash()
 	}
-	tag := fmt.Sprintf("v%s", release.NewVersion)
+	tag := fmt.Sprintf("%sv%s", repo.prefix, release.NewVersion)
 	_, err := repo.repo.CreateTag(tag, hash, &git.CreateTagOptions{
 		Message: release.Changelog,
 		Tagger: &object.Signature{
