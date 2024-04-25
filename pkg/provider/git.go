@@ -108,7 +108,8 @@ func (repo *Repository) GetCommits(fromSha, toSha string) ([]*semrel.RawCommit, 
 	}
 
 	commits, err := repo.repo.Log(&git.LogOptions{
-		From: *toHash,
+		From:  *toHash,
+		Order: git.LogOrderCommitterTime,
 	})
 	if err != nil {
 		return nil, err

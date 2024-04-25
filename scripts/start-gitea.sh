@@ -17,3 +17,21 @@ sleep 10
 
 echo "creating test repo..."
 curl -u 'test:test' -XPOST -H 'Content-Type: application/json' -d '{"name":"test"}' http://localhost:3000/api/v1/user/repos
+
+echo "creating no_ff_merge repo..."
+curl -u 'test:test' -XPOST -H 'Content-Type: application/json' -d '{"name":"no_ff_merge"}' http://localhost:3000/api/v1/user/repos
+
+echo "populating no_ff_merge repo..."
+tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'tmpdir')
+cd $tmpdir
+git init --initial-branch=master
+git commit -m "feat: initial commit" --allow-empty
+git tag v1.0.0
+git switch -C feature
+sleep 1
+git commit -m "feat: feature" --allow-empty
+git switch master
+git merge --no-ff feature --no-edit
+git push http://test:test@localhost:3000/test/no_ff_merge.git master --tags
+cd -
+rm -rf $tmpdir

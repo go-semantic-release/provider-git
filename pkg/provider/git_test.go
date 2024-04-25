@@ -26,6 +26,7 @@ func TestGit(t *testing.T) {
 	t.Run("GetInfo", getInfo)
 	t.Run("GetReleases", getReleases)
 	t.Run("GetCommits", getCommits)
+	t.Run("GetCommitsNoFFMerge", getCommitsNoFFMerge)
 	t.Run("CreateRelease", createRelease)
 }
 
@@ -151,6 +152,31 @@ func createRepo() (*Repository, error) {
 	return repo, nil
 }
 
+func cloneRepo(path string, url string) (*Repository, error) {
+	_, err := git.PlainClone(path, false, &git.CloneOptions{
+		Auth: &http.BasicAuth{
+			Username: "test",
+			Password: "test",
+		},
+		URL: url,
+	})
+	if err != nil {
+		return nil, err
+	}
+	repo := &Repository{}
+	err = repo.Init(map[string]string{
+		"git_path":      path,
+		"auth":          "basic",
+		"auth_username": "test",
+		"auth_password": "test",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return repo, nil
+}
+
 func getInfo(t *testing.T) {
 	require := require.New(t)
 	repo, err := createRepo()
@@ -177,6 +203,20 @@ func getCommits(t *testing.T) {
 		require.Equal(gitCommitAuthor.Name, c.Annotations["committer_name"])
 		require.Equal(gitCommitAuthor.Email, c.Annotations["committer_email"])
 	}
+}
+
+func getCommitsNoFFMerge(t *testing.T) {
+	require := require.New(t)
+	dir, err := os.MkdirTemp("", "provider-git")
+	require.NoError(err)
+	repo, err := cloneRepo(dir, "http://localhost:3000/test/no_ff_merge.git")
+	require.NoError(err)
+	releases, err := repo.GetReleases("")
+	require.Len(releases, 1)
+	initialCommitSha := releases[0].GetSHA()
+	commits, err := repo.GetCommits(initialCommitSha, "master")
+	require.NoError(err)
+	require.Len(commits, 2)
 }
 
 func createRelease(t *testing.T) {
@@ -211,14 +251,27 @@ func createRelease(t *testing.T) {
 			Changelog:  testCase.changelog,
 		})
 		require.NoError(err)
+		tagName := "v" + testCase.version
 
-		tagRef, err := gRepo.Tag("v" + testCase.version)
+		tagRef, err := gRepo.Tag(tagName)
 		require.NoError(err)
 
 		tagObj, err := gRepo.TagObject(tagRef.Hash())
 		require.NoError(err)
 
 		require.Equal(testCase.changelog+"\n", tagObj.Message)
+
+		// Clean up tags so future test runs succeed
+		tagRefName := ":refs/tags/" + tagName
+		err = gRepo.Push(&git.PushOptions{
+			RemoteName: "origin",
+			RefSpecs:   []config.RefSpec{config.RefSpec(tagRefName)},
+			Auth: &http.BasicAuth{
+				Username: "test",
+				Password: "test",
+			},
+		})
+		require.NoError(err)
 	}
 }
 
