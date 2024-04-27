@@ -22,13 +22,14 @@ import (
 var PVERSION = "dev"
 
 type Repository struct {
-	defaultBranch string
-	taggerName    string
-	taggerEmail   string
-	remoteName    string
-	auth          transport.AuthMethod
-	repo          *git.Repository
-	pushOptions   map[string]string
+	defaultBranch         string
+	taggerName            string
+	taggerEmail           string
+	remoteName            string
+	auth                  transport.AuthMethod
+	repo                  *git.Repository
+	pushOptions           map[string]string
+	orderLogsByCommitTime bool
 }
 
 func (repo *Repository) Init(config map[string]string) error {
@@ -107,9 +108,13 @@ func (repo *Repository) GetCommits(fromSha, toSha string) ([]*semrel.RawCommit, 
 		return nil, err
 	}
 
+	logOrder := git.LogOrderDefault
+	if repo.orderLogsByCommitTime {
+		logOrder = git.LogOrderCommitterTime
+	}
 	commits, err := repo.repo.Log(&git.LogOptions{
 		From:  *toHash,
-		Order: git.LogOrderCommitterTime,
+		Order: logOrder,
 	})
 	if err != nil {
 		return nil, err
