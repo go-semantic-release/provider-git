@@ -26,7 +26,8 @@ func TestGit(t *testing.T) {
 	t.Run("GetInfo", getInfo)
 	t.Run("GetReleases", getReleases)
 	t.Run("GetCommits", getCommits)
-	t.Run("GetCommitsNoFFMerge", getCommitsNoFFMerge)
+	t.Run("GetCommitsNoFFMergeDFS", getCommitsNoFFMergeDFS)
+	t.Run("GetCommitsNoFFMergeDFSPost", getCommitsNoFFMergeDFSPost)
 	t.Run("GetCommitsNoFFMergeCTime", getCommitsNoFFMergeCTime)
 	t.Run("CreateRelease", createRelease)
 }
@@ -206,7 +207,7 @@ func getCommits(t *testing.T) {
 	}
 }
 
-func getCommitsNoFFMerge(t *testing.T) {
+func getCommitsNoFFMergeDFS(t *testing.T) {
 	require := require.New(t)
 	dir, err := os.MkdirTemp("", "provider-git")
 	require.NoError(err)
@@ -222,6 +223,22 @@ func getCommitsNoFFMerge(t *testing.T) {
 }
 
 func getCommitsNoFFMergeCTime(t *testing.T) {
+	require := require.New(t)
+	dir, err := os.MkdirTemp("", "provider-git")
+	require.NoError(err)
+	repo, err := cloneRepo(dir, "http://localhost:3000/test/no_ff_merge.git")
+	repo.logOrder = git.LogOrderCommitterTime
+	require.NoError(err)
+	releases, err := repo.GetReleases("")
+	require.NoError(err)
+	require.Len(releases, 1)
+	initialCommitSha := releases[0].GetSHA()
+	commits, err := repo.GetCommits(initialCommitSha, "master")
+	require.NoError(err)
+	require.Len(commits, 2)
+}
+
+func getCommitsNoFFMergeDFSPost(t *testing.T) {
 	require := require.New(t)
 	dir, err := os.MkdirTemp("", "provider-git")
 	require.NoError(err)
