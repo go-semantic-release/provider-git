@@ -152,7 +152,7 @@ func createRepo() (*Repository, error) {
 	return repo, nil
 }
 
-func cloneRepo(path string, url string) (*Repository, error) {
+func cloneRepo(path, url string) (*Repository, error) {
 	_, err := git.PlainClone(path, false, &git.CloneOptions{
 		Auth: &http.BasicAuth{
 			Username: "test",
@@ -212,6 +212,7 @@ func getCommitsNoFFMerge(t *testing.T) {
 	repo, err := cloneRepo(dir, "http://localhost:3000/test/no_ff_merge.git")
 	require.NoError(err)
 	releases, err := repo.GetReleases("")
+	require.NoError(err)
 	require.Len(releases, 1)
 	initialCommitSha := releases[0].GetSHA()
 	commits, err := repo.GetCommits(initialCommitSha, "master")
