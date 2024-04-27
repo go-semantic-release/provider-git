@@ -226,7 +226,7 @@ func getCommitsNoFFMergeCTime(t *testing.T) {
 	dir, err := os.MkdirTemp("", "provider-git")
 	require.NoError(err)
 	repo, err := cloneRepo(dir, "http://localhost:3000/test/no_ff_merge.git")
-	repo.orderLogsByCommitTime = true
+	repo.logOrder = git.LogOrderCommitterTime
 	require.NoError(err)
 	releases, err := repo.GetReleases("")
 	require.NoError(err)
