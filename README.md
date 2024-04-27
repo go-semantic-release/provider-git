@@ -43,6 +43,7 @@ To use this plugin you need to include the following block in your
 | auth_private_key |                             | The path to an SSH private key file.               |
 | git_path         | .                           | The path to the Git repository.                    |
 | push_options     |                             | The push options for the git tag push.             |
+| log_order        | dfs                         | The log order traversal algorithm.                 |
 
 ### Authentication
 
@@ -69,6 +70,17 @@ Git remote ove ran SSH connection.
 For this method you'll need to set `auth_username` and
 `auth_private_key`. If your private key uses a password then you'll
 also need to set `auth_password`.
+
+### Log Order Options
+
+log_order=dfs (Default) - Ordering by depth-first search in pre-order
+
+log_order=dfs_post - Ordering by depth-first search in post-order (useful to traverse
+history in chronological order)
+
+log_order=bfs - Ordering by breadth-first search
+
+log_order=ctime - Ordering by committer time (more compatible with `git log`)
 
 ## Licence
 
