@@ -22,16 +22,17 @@ import (
 var PVERSION = "dev"
 
 type Repository struct {
-	defaultBranch         string
-	taggerName            string
-	taggerEmail           string
-	remoteName            string
-	auth                  transport.AuthMethod
-	repo                  *git.Repository
-	pushOptions           map[string]string
-	orderLogsByCommitTime bool
+	defaultBranch string
+	taggerName    string
+	taggerEmail   string
+	remoteName    string
+	auth          transport.AuthMethod
+	repo          *git.Repository
+	pushOptions   map[string]string
+	logOrder      git.LogOrder
 }
 
+//gocyclo:ignore
 func (repo *Repository) Init(config map[string]string) error {
 	repo.defaultBranch = config["default_branch"]
 	if repo.defaultBranch == "" {
@@ -79,6 +80,19 @@ func (repo *Repository) Init(config map[string]string) error {
 		}
 	}
 
+	switch config["log_order"] {
+	case "ctime":
+		repo.logOrder = git.LogOrderCommitterTime
+	case "dfs":
+		repo.logOrder = git.LogOrderDFS
+	case "dfs_post":
+		repo.logOrder = git.LogOrderDFSPost
+	case "bfs": // intentionally correcting to bfs instead of the bsf typo
+		repo.logOrder = git.LogOrderBSF
+	default:
+		repo.logOrder = git.LogOrderDefault
+	}
+
 	gitPath := config["git_path"]
 	if gitPath == "" {
 		gitPath = "."
@@ -108,13 +122,9 @@ func (repo *Repository) GetCommits(fromSha, toSha string) ([]*semrel.RawCommit, 
 		return nil, err
 	}
 
-	logOrder := git.LogOrderDefault
-	if repo.orderLogsByCommitTime {
-		logOrder = git.LogOrderCommitterTime
-	}
 	commits, err := repo.repo.Log(&git.LogOptions{
 		From:  *toHash,
-		Order: logOrder,
+		Order: repo.logOrder,
 	})
 	if err != nil {
 		return nil, err
