@@ -243,7 +243,7 @@ func getCommitsNoFFMergeDFSPost(t *testing.T) {
 	dir, err := os.MkdirTemp("", "provider-git")
 	require.NoError(err)
 	repo, err := cloneRepo(dir, "http://localhost:3000/test/no_ff_merge.git")
-	repo.logOrder = git.LogOrderCommitterTime
+	repo.logOrder = git.LogOrderDFSPost
 	require.NoError(err)
 	releases, err := repo.GetReleases("")
 	require.NoError(err)
