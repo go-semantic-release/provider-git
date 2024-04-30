@@ -24,6 +24,10 @@ curl -u 'test:test' -XPOST -H 'Content-Type: application/json' -d '{"name":"no_f
 echo "populating no_ff_merge repo..."
 tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'tmpdir')
 cd $tmpdir
+export GIT_COMMITTER_NAME=test
+export GIT_COMMITTER_EMAIL=test@test.com
+export GIT_AUTHOR_NAME=test
+export GIT_AUTHOR_EMAIL=test@test.com
 git init --initial-branch=master
 git commit -m "feat: initial commit" --allow-empty
 git tag v1.0.0
